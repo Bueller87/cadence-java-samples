@@ -32,13 +32,14 @@ import javax.crypto.spec.SecretKeySpec;
  * AES-256-GCM.
  *
  * <p>Every workflow input, output, and activity parameter is encrypted before being written to
- * Cadence history. Without the key, the data stored by the Cadence server — including any operator
- * browsing workflow history — is completely opaque.
+ * Cadence history. Without the key, payloads stored by the Cadence server are unreadable to
+ * operators browsing workflow history. Logs, metrics, and search attributes are separate disclosure
+ * surfaces and must be handled separately.
  *
- * <p>Output layout: {@code nonce(12 bytes) || ciphertext+tag(16 bytes)}. The random nonce means
- * the same plaintext produces different ciphertext on every call, preventing replay detection by
- * an attacker who observes Cadence history. The GCM authentication tag ensures any ciphertext
- * tampering is detected at decode time.
+ * <p>Output layout: {@code nonce(12 bytes) || ciphertext || tag(16 bytes)}. The random nonce means
+ * the same plaintext produces different ciphertext on every call, which preserves semantic security
+ * for repeated payloads. The GCM authentication tag ensures any ciphertext tampering is detected at
+ * decode time.
  */
 public final class EncryptedJsonDataConverter implements DataConverter {
 
@@ -51,8 +52,8 @@ public final class EncryptedJsonDataConverter implements DataConverter {
   private final SecureRandom random = new SecureRandom();
 
   /**
-   * @param keyBytes 32-byte AES-256 key. The caller is responsible for sourcing this from a
-   *     secrets manager in production; see {@link EncryptionKeyLoader}.
+   * @param keyBytes 32-byte AES-256 key. The caller is responsible for sourcing this from a secrets
+   *     manager in production; see {@link EncryptionKeyLoader}.
    * @throws IllegalArgumentException if the key is not 32 bytes.
    */
   public EncryptedJsonDataConverter(byte[] keyBytes) {

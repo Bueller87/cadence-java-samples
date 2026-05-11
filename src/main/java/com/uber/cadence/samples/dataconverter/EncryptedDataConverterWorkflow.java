@@ -25,8 +25,9 @@ import java.time.Duration;
 
 /**
  * Demonstrates AES-256-GCM encryption as a Cadence {@code DataConverter}. Every workflow input,
- * output, and activity parameter is encrypted before being written to Cadence history. Without
- * the key, the data is opaque to anyone browsing workflow history — including Cadence operators.
+ * output, and activity parameter is encrypted before being written to Cadence history. Without the
+ * key, payloads in workflow history are unreadable to anyone browsing history — including Cadence
+ * operators. Application logs, metrics, and search attributes are not encrypted by a DataConverter.
  *
  * <p>The workflow takes no inputs and builds its own sensitive payload internally so it can be
  * started from the Cadence CLI without bundling the encryption key into the caller.
@@ -78,9 +79,10 @@ public final class EncryptedDataConverterWorkflow {
   public interface WorkflowIface {
 
     @WorkflowMethod(
-        name = DataConverterConstants.ENCRYPTION_WORKFLOW_TYPE,
-        executionStartToCloseTimeoutSeconds = 60,
-        taskList = DataConverterConstants.TASK_LIST_ENCRYPTION)
+      name = DataConverterConstants.ENCRYPTION_WORKFLOW_TYPE,
+      executionStartToCloseTimeoutSeconds = 60,
+      taskList = DataConverterConstants.TASK_LIST_ENCRYPTION
+    )
     SensitiveCustomerRecord run();
   }
 

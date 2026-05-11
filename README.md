@@ -29,7 +29,7 @@ These samples demonstrate various capabilities of Java Cadence client and server
 
 * **Custom Workflow Controls** ([`com.uber.cadence.samples.query`](src/main/java/com/uber/cadence/samples/query/)) — workflow queries that return **markdown** for Cadence Web (Markdoc buttons that **signal** workflows or **start** new workflows). **Requires Cadence Web v4.0.14+.** Copy-paste run instructions: [query samples README](src/main/java/com/uber/cadence/samples/query/README.md).
 
-* **DataConverter Samples** ([`com.uber.cadence.samples.dataconverter`](src/main/java/com/uber/cadence/samples/dataconverter/)) — three production-ready custom `DataConverter` patterns (gzip compression, AES-256-GCM encryption, and S3 / claim-check offload) that transparently transform every workflow input, output, and activity parameter. Copy-paste run instructions: [dataconverter samples README](src/main/java/com/uber/cadence/samples/dataconverter/README.md).
+* **DataConverter Samples** ([`com.uber.cadence.samples.dataconverter`](src/main/java/com/uber/cadence/samples/dataconverter/)) — three custom `DataConverter` patterns (gzip compression, AES-256-GCM encryption, and BlobStore / S3 claim-check offload) that transparently transform every workflow input, output, and activity parameter. Copy-paste run instructions: [dataconverter samples README](src/main/java/com/uber/cadence/samples/dataconverter/README.md).
 
 ## Get the Samples
 

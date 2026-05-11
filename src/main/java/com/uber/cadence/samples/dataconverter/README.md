@@ -1,6 +1,6 @@
 # DataConverter Samples
 
-Three production-ready patterns for custom `DataConverter` implementations in the Cadence Java client: **compression**, **encryption**, and **S3 / claim-check offload**. A `DataConverter` controls how every workflow input, output, and activity parameter is serialized before it is written to Cadence history — making it the right place to add compression, encryption, or external offloading without changing any workflow or activity code.
+Three practical patterns for custom `DataConverter` implementations in the Cadence Java client: **compression**, **encryption**, and **BlobStore / S3 claim-check offload**. A `DataConverter` controls how every workflow input, output, and activity parameter is serialized before it is written to Cadence history — making it the right place to add compression, encryption, or external offloading without changing any workflow or activity code.
 
 ## What is a DataConverter?
 
@@ -60,7 +60,7 @@ Run **one** of the starters per sample run. Each starts a new workflow execution
 ./gradlew -q execute -PmainClass=com.uber.cadence.samples.dataconverter.EncryptionStarter
 ```
 
-**S3 offload** — claim-check pattern:
+**S3 offload** — claim-check pattern with a zero-config local `BlobStore`:
 
 ```bash
 ./gradlew -q execute -PmainClass=com.uber.cadence.samples.dataconverter.S3OffloadStarter
@@ -72,21 +72,21 @@ You can also start any of the three from the Cadence CLI; the commands are print
 
 ## Compression Sample
 
-`CompressedDataConverterWorkflow` demonstrates gzip-over-JSON compression. For repetitive JSON data this typically achieves 60–80% size reduction, lowering storage cost and bandwidth for large workflow payloads. The converter is implemented in [`CompressedJsonDataConverter.java`](CompressedJsonDataConverter.java) — it wraps `JsonDataConverter.getInstance()` and post-processes the resulting bytes through `java.util.zip.GZIP*Stream`.
+`CompressedDataConverterWorkflow` demonstrates gzip-over-JSON compression. For repetitive JSON data this typically achieves 60–80% size reduction, lowering storage cost and bandwidth for large workflow payloads. The converter is implemented in [`CompressedJsonDataConverter.java`](CompressedJsonDataConverter.java) — it wraps `JsonDataConverter.getInstance()`, post-processes the resulting bytes through `java.util.zip.GZIP*Stream`, and caps decompressed output to avoid unbounded memory growth on malformed input.
 
 - **Task list:** `data-compression`
-- **Workflow type:** `CompressionDataConverterWorkflow`
+- **Workflow type:** `CompressedDataConverterWorkflow`
 
 ---
 
 ## Encryption Sample
 
-`EncryptedDataConverterWorkflow` demonstrates AES-256-GCM encryption. Every workflow input, output, and activity parameter is encrypted before being written to Cadence history. Without the key, the data stored by the Cadence server — including any operators browsing workflow history — is completely opaque.
+`EncryptedDataConverterWorkflow` demonstrates AES-256-GCM encryption. Every workflow input, output, and activity parameter is encrypted before being written to Cadence history. Without the key, payloads stored by the Cadence server are unreadable to operators browsing workflow history. Logs, metrics, search attributes, and application output are separate disclosure surfaces.
 
 The sample uses a `SensitiveCustomerRecord` containing realistic PII and PHI fields (name, email, SSN, credit card, medical notes) to make the use case concrete.
 
 - **Task list:** `data-encryption`
-- **Workflow type:** `EncryptionDataConverterWorkflow`
+- **Workflow type:** `EncryptedDataConverterWorkflow`
 
 ### Encryption key
 
@@ -101,23 +101,23 @@ export CADENCE_ENCRYPTION_KEY=$(openssl rand -hex 32)
 
 ### How AES-256-GCM works
 
-- `toData`: JSON-encode arguments → generate a 12-byte random nonce → `Cipher.doFinal` with `AES/GCM/NoPadding` → return `nonce || ciphertext+tag`.
+- `toData`: JSON-encode arguments → generate a 12-byte random nonce → `Cipher.doFinal` with `AES/GCM/NoPadding` → return `nonce || ciphertext || tag`.
 - `fromData` / `fromDataArray`: split nonce from input → `Cipher.doFinal` (decrypt) → JSON-decode.
 
-The GCM authentication tag (16 bytes) ensures any ciphertext tampering is detected. The random nonce means the same plaintext produces different ciphertext on every call, preventing replay detection by an attacker observing Cadence history.
+The GCM authentication tag (16 bytes) ensures any ciphertext tampering is detected. The random nonce means the same plaintext produces different ciphertext on every call, which preserves semantic security for repeated payloads.
 
 ---
 
 ## S3 Offload Sample (claim-check pattern)
 
-`S3OffloadDataConverterWorkflow` demonstrates the *claim-check* pattern: payloads larger than a configurable threshold are stored in an external [`BlobStore`](BlobStore.java) and only a small reference (a few dozen bytes) travels through Cadence workflow history. This solves Cadence's per-payload size limits (~2 MB) for workflows that pass very large datasets between the workflow and its activities.
+`S3OffloadDataConverterWorkflow` demonstrates the *claim-check* pattern: payloads larger than a configurable threshold are stored in an external [`BlobStore`](BlobStore.java) and only a small reference (a few dozen bytes) travels through Cadence workflow history. The runnable sample uses [`LocalFsBlobStore`](LocalFsBlobStore.java) so it works without cloud credentials; the same abstraction can be backed by S3 in production. This solves Cadence's per-payload size limits (~2 MB) for workflows that pass very large datasets between the workflow and its activities.
 
 - **Task list:** `data-s3`
 - **Workflow type:** `S3OffloadDataConverterWorkflow`
 
 ### How it works
 
-- `toData`: JSON-encode → if `len(json) > thresholdBytes`, upload to `BlobStore` under a SHA-256 key and return `0x01 || {"__s3_ref":"<bucket>/<sha256hex>"}`. Otherwise return `0x00 || json` inline.
+- `toData`: JSON-encode → if `len(json) > thresholdBytes`, upload to `BlobStore` under a SHA-256 key and return `0x01 || {"s3Ref":"<bucket>/<sha256hex>"}`. Otherwise return `0x00 || json` inline.
 - `fromData` / `fromDataArray`: read prefix byte → if `0x01`, fetch from `BlobStore` and decode; if `0x00`, decode inline.
 
 SHA-256-of-payload is used as the key so `toData` is idempotent across Cadence workflow replays. Using a fresh UUID per call would write a new orphaned blob on every replay.
@@ -150,9 +150,9 @@ You can also point the SDK at [LocalStack](https://localstack.cloud/) or [MinIO]
 |---------|----------|
 | **Compression** | Large repetitive JSON payloads; reducing storage cost without confidentiality requirements |
 | **Encryption** | PII, PHI, secrets, or any data that must be unreadable in Cadence history |
-| **S3 Offload** | Payloads approaching Cadence's size limits; binary or non-JSON data; cost-conscious archival |
+| **BlobStore / S3 Offload** | Payloads approaching Cadence's size limits; binary or non-JSON data; cost-conscious archival |
 
-Patterns can be composed: encrypt-then-compress, or encrypt-then-offload to S3 for maximum security and minimum history size.
+Patterns can be composed, but order matters. Compress before encrypting when size reduction is a goal; encrypt before offloading when the external store should only receive ciphertext.
 
 ## Source layout
 
