@@ -34,10 +34,27 @@ import java.util.zip.GZIPOutputStream;
  * <p>For repetitive JSON payloads this typically achieves 60-80% size reduction, lowering storage
  * cost and bandwidth without changing any workflow or activity code. Apply by setting it on the
  * {@code WorkflowClientOptions} used by both the worker and any client that triggers the workflow.
+ * The decode path caps decompressed payloads to avoid unbounded memory growth on malformed input.
  */
 public final class CompressedJsonDataConverter implements DataConverter {
 
+  /** Production code should choose a limit appropriate for its workflow payload contract. */
+  public static final int DEFAULT_MAX_DECOMPRESSED_BYTES = 10 * 1024 * 1024;
+
   private static final DataConverter delegate = JsonDataConverter.getInstance();
+
+  private final int maxDecompressedBytes;
+
+  public CompressedJsonDataConverter() {
+    this(DEFAULT_MAX_DECOMPRESSED_BYTES);
+  }
+
+  public CompressedJsonDataConverter(int maxDecompressedBytes) {
+    if (maxDecompressedBytes <= 0) {
+      throw new IllegalArgumentException("maxDecompressedBytes must be positive");
+    }
+    this.maxDecompressedBytes = maxDecompressedBytes;
+  }
 
   @Override
   public byte[] toData(Object... values) throws DataConverterException {
@@ -65,7 +82,7 @@ public final class CompressedJsonDataConverter implements DataConverter {
     if (content == null || content.length == 0) {
       return delegate.fromData(content, valueClass, valueType);
     }
-    return delegate.fromData(decompress(content), valueClass, valueType);
+    return delegate.fromData(decompress(content, maxDecompressedBytes), valueClass, valueType);
   }
 
   @Override
@@ -73,15 +90,19 @@ public final class CompressedJsonDataConverter implements DataConverter {
     if (content == null || content.length == 0) {
       return delegate.fromDataArray(content, valueTypes);
     }
-    return delegate.fromDataArray(decompress(content), valueTypes);
+    return delegate.fromDataArray(decompress(content, maxDecompressedBytes), valueTypes);
   }
 
-  private static byte[] decompress(byte[] content) throws DataConverterException {
+  private static byte[] decompress(byte[] content, int maxBytes) throws DataConverterException {
     try (GZIPInputStream gzip = new GZIPInputStream(new ByteArrayInputStream(content));
         ByteArrayOutputStream out = new ByteArrayOutputStream()) {
       byte[] buf = new byte[4096];
       int read;
       while ((read = gzip.read(buf)) != -1) {
+        if (out.size() > maxBytes - read) {
+          throw new DataConverterException(
+              "Gunzip payload exceeds maximum size of " + maxBytes + " bytes", null);
+        }
         out.write(buf, 0, read);
       }
       return out.toByteArray();

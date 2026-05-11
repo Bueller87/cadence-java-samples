@@ -22,7 +22,6 @@ import com.uber.cadence.converter.DataConverterException;
 import com.uber.cadence.converter.JsonDataConverter;
 import java.io.IOException;
 import java.lang.reflect.Type;
-import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
@@ -39,15 +38,15 @@ import java.security.NoSuchAlgorithmException;
  *
  * <ul>
  *   <li>{@code 0x00 || json} — payload is small enough to inline.
- *   <li>{@code 0x01 || jsonEnvelope} — payload was offloaded; the envelope JSON has the form
- *       {@code {"__s3_ref":"<bucket>/<sha256hex>"}}.
+ *   <li>{@code 0x01 || jsonEnvelope} — payload was offloaded; the envelope JSON has the form {@code
+ *       {"s3Ref":"<bucket>/<sha256hex>"}}.
  * </ul>
  *
  * <p>Keys are derived from the SHA-256 of the payload so {@code toData} is idempotent across
  * Cadence workflow replays. Using a fresh UUID per call would write a new orphaned blob on every
  * replay because the SDK calls {@code toData} again each time the workflow re-executes from the
- * top. If the workflow needs to control the key (e.g. to encode routing metadata), generate it
- * with {@code Workflow.sideEffect} and pass it alongside the payload instead.
+ * top. If the workflow needs to control the key (e.g. to encode routing metadata), generate it with
+ * {@code Workflow.sideEffect} and pass it alongside the payload instead.
  */
 /*
  * =============================================================================
@@ -104,12 +103,31 @@ public final class S3OffloadDataConverter implements DataConverter {
   private final String bucket;
   private final int thresholdBytes;
 
+  static final class BlobReference {
+    public String s3Ref;
+
+    public BlobReference() {}
+
+    BlobReference(String s3Ref) {
+      this.s3Ref = s3Ref;
+    }
+  }
+
   /**
    * @param store the BlobStore backend (use {@link LocalFsBlobStore} for zero-config demo).
    * @param bucket logical bucket / prefix name embedded in the reference key.
    * @param thresholdBytes max inline payload size; larger payloads are offloaded.
    */
   public S3OffloadDataConverter(BlobStore store, String bucket, int thresholdBytes) {
+    if (store == null) {
+      throw new IllegalArgumentException("store must not be null");
+    }
+    if (bucket == null || bucket.trim().isEmpty()) {
+      throw new IllegalArgumentException("bucket must not be null or empty");
+    }
+    if (thresholdBytes < 0) {
+      throw new IllegalArgumentException("thresholdBytes must not be negative");
+    }
     this.store = store;
     this.bucket = bucket;
     this.thresholdBytes = thresholdBytes;
@@ -140,8 +158,7 @@ public final class S3OffloadDataConverter implements DataConverter {
           "Failed to offload payload to blob store (key=" + key + ")", e);
     }
 
-    String envelope = "{\"__s3_ref\":\"" + key + "\"}";
-    byte[] envBytes = envelope.getBytes(StandardCharsets.UTF_8);
+    byte[] envBytes = delegate.toData(new BlobReference(key));
     byte[] result = new byte[1 + envBytes.length];
     result[0] = OFFLOAD_PREFIX;
     System.arraycopy(envBytes, 0, result, 1, envBytes.length);
@@ -173,7 +190,7 @@ public final class S3OffloadDataConverter implements DataConverter {
       case INLINE_PREFIX:
         return body;
       case OFFLOAD_PREFIX:
-        String key = extractS3Ref(new String(body, StandardCharsets.UTF_8));
+        String key = extractS3Ref(body);
         try {
           return store.get(key);
         } catch (IOException e) {
@@ -186,24 +203,13 @@ public final class S3OffloadDataConverter implements DataConverter {
     }
   }
 
-  /**
-   * Extracts the value of {@code __s3_ref} from the envelope JSON without bringing in a JSON
-   * parser. The envelope is produced by this class, so the format is fixed and trivially parseable.
-   */
-  private static String extractS3Ref(String envelopeJson) throws DataConverterException {
-    String marker = "\"__s3_ref\":\"";
-    int start = envelopeJson.indexOf(marker);
-    if (start < 0) {
-      throw new DataConverterException(
-          "s3 offload: envelope missing __s3_ref field: " + envelopeJson, null);
+  private static String extractS3Ref(byte[] envelopeJson) throws DataConverterException {
+    BlobReference reference =
+        delegate.fromData(envelopeJson, BlobReference.class, BlobReference.class);
+    if (reference == null || reference.s3Ref == null || reference.s3Ref.isEmpty()) {
+      throw new DataConverterException("s3 offload: envelope missing s3Ref field", null);
     }
-    start += marker.length();
-    int end = envelopeJson.indexOf('"', start);
-    if (end < 0) {
-      throw new DataConverterException(
-          "s3 offload: envelope __s3_ref field is unterminated: " + envelopeJson, null);
-    }
-    return envelopeJson.substring(start, end);
+    return reference.s3Ref;
   }
 
   private static String sha256Hex(byte[] data) throws DataConverterException {
