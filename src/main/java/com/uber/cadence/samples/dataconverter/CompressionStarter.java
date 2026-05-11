@@ -32,7 +32,7 @@ import java.util.UUID;
  * <pre>
  * cadence --domain samples-domain \
  *   workflow start \
- *   --workflow_type CompressionDataConverterWorkflow \
+ *   --workflow_type CompressedDataConverterWorkflow \
  *   --tl data-compression \
  *   --et 60
  * </pre>

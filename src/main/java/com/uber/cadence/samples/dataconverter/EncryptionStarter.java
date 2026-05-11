@@ -25,14 +25,14 @@ import java.util.UUID;
 /**
  * Starts {@link EncryptedDataConverterWorkflow} (async, fire-and-forget).
  *
- * <p>The workflow takes no inputs and generates its own payload, so this starter does not need
- * the encryption key — the worker owns the key. The same effect can be achieved from the Cadence
- * CLI via:
+ * <p>The workflow takes no inputs and generates its own payload, so this starter does not need the
+ * encryption key — the worker owns the key. The same effect can be achieved from the Cadence CLI
+ * via:
  *
  * <pre>
  * cadence --domain samples-domain \
  *   workflow start \
- *   --workflow_type EncryptionDataConverterWorkflow \
+ *   --workflow_type EncryptedDataConverterWorkflow \
  *   --tl data-encryption \
  *   --et 60
  * </pre>

@@ -24,9 +24,9 @@ import com.uber.cadence.worker.Worker;
 import com.uber.cadence.worker.WorkerFactory;
 
 /**
- * Hosts all three DataConverter sample workers in a single process. Each sample uses its own
- * {@link WorkflowClient} (and therefore its own {@link WorkerFactory}) because the
- * {@code DataConverter} is bound to {@code WorkflowClientOptions}.
+ * Hosts all three DataConverter sample workers in a single process. Each sample uses its own {@link
+ * WorkflowClient} (and therefore its own {@link WorkerFactory}) because the {@code DataConverter}
+ * is bound to {@code WorkflowClientOptions}.
  *
  * <p>On startup the worker prints a stats banner per sample showing the visible benefit of each
  * pattern (compression ratio, ciphertext preview, claim-check size), then begins polling all three
@@ -38,7 +38,8 @@ public final class DataConverterWorker {
 
   public static void main(String[] args) {
     DataConverter compressionConverter = new CompressedJsonDataConverter();
-    DataConverter encryptionConverter = new EncryptedJsonDataConverter(EncryptionKeyLoader.loadEncryptionKey());
+    DataConverter encryptionConverter =
+        new EncryptedJsonDataConverter(EncryptionKeyLoader.loadEncryptionKey());
     LocalFsBlobStore blobStore = new LocalFsBlobStore();
     DataConverter s3Converter =
         new S3OffloadDataConverter(
@@ -119,8 +120,10 @@ public final class DataConverterWorker {
 
     System.out.println();
     System.out.println("=== Compression Sample Statistics ===");
-    System.out.printf("Original JSON size:  %d bytes (%.2f KB)%n", originalSize, originalSize / 1024.0);
-    System.out.printf("Compressed size:     %d bytes (%.2f KB)%n", compressedSize, compressedSize / 1024.0);
+    System.out.printf(
+        "Original JSON size:  %d bytes (%.2f KB)%n", originalSize, originalSize / 1024.0);
+    System.out.printf(
+        "Compressed size:     %d bytes (%.2f KB)%n", compressedSize, compressedSize / 1024.0);
     System.out.printf("Compression ratio:   %.2f%% reduction%n", pct);
     System.out.printf(
         "Space saved:         %d bytes (%.2f KB)%n",
@@ -147,7 +150,7 @@ public final class DataConverterWorker {
     System.out.println("=== Encryption Sample Statistics ===");
     System.out.printf("Plaintext JSON size:  %d bytes%n", plaintextSize);
     System.out.printf(
-        "Ciphertext size:      %d bytes (overhead: %d bytes nonce+tag)%n",
+        "Encrypted payload:    %d bytes (growth: %d bytes vs plaintext JSON)%n",
         ciphertextSize, ciphertextSize - plaintextSize);
     System.out.printf("Ciphertext preview:   %s%n", preview);
     System.out.printf(
@@ -164,11 +167,11 @@ public final class DataConverterWorker {
         S3OffloadDataConverterWorkflow.createS3LargePayload();
     byte[] jsonBytes = JsonDataConverter.getInstance().toData(payload);
     int jsonSize = jsonBytes == null ? 0 : jsonBytes.length;
-    // History footprint = 1 prefix byte + JSON envelope {"__s3_ref":"<bucket>/<sha256hex>"}.
+    // History footprint = 1 prefix byte + JSON envelope {"s3Ref":"<bucket>/<sha256hex>"}.
     // SHA-256 hex digest is 64 chars; bucket + "/" + 64 hex chars.
     int cadenceBytes =
         1
-            + ("{\"__s3_ref\":\""
+            + ("{\"s3Ref\":\""
                     + DataConverterConstants.S3_BUCKET
                     + "/"
                     + repeatChar('a', 64)
@@ -177,8 +180,10 @@ public final class DataConverterWorker {
 
     System.out.println();
     System.out.println("=== S3 Offload Sample Statistics ===");
-    System.out.printf("Full payload JSON size:    %d bytes (%.2f KB)%n", jsonSize, jsonSize / 1024.0);
-    System.out.printf("Stored in BlobStore:       %d bytes (%.2f KB)%n", jsonSize, jsonSize / 1024.0);
+    System.out.printf(
+        "Full payload JSON size:    %d bytes (%.2f KB)%n", jsonSize, jsonSize / 1024.0);
+    System.out.printf(
+        "Stored in BlobStore:       %d bytes (%.2f KB)%n", jsonSize, jsonSize / 1024.0);
     System.out.printf(
         "Stored in Cadence history: %d bytes (claim-check reference only)%n", cadenceBytes);
     System.out.printf(

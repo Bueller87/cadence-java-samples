@@ -22,10 +22,10 @@ import com.uber.cadence.samples.common.SampleConstants;
 /**
  * Shared identifiers for the DataConverter samples.
  *
- * <p>Each of the three samples runs on its own task list so it can have its own
- * {@code DataConverter}. {@code DataConverter} is bound to a {@code WorkflowClient}, and each task
- * list maps to one worker built from one client; that is why one process needs three clients to
- * host all three samples.
+ * <p>Each of the three samples runs on its own task list so it can have its own {@code
+ * DataConverter}. {@code DataConverter} is bound to a {@code WorkflowClient}, and each task list
+ * maps to one worker built from one client; that is why one process needs three clients to host all
+ * three samples.
  */
 public final class DataConverterConstants {
 
@@ -44,10 +44,10 @@ public final class DataConverterConstants {
   public static final String TASK_LIST_S3 = "data-s3";
 
   /** Registered workflow type for {@code CompressedDataConverterWorkflow}. */
-  public static final String COMPRESSION_WORKFLOW_TYPE = "CompressionDataConverterWorkflow";
+  public static final String COMPRESSION_WORKFLOW_TYPE = "CompressedDataConverterWorkflow";
 
   /** Registered workflow type for {@code EncryptedDataConverterWorkflow}. */
-  public static final String ENCRYPTION_WORKFLOW_TYPE = "EncryptionDataConverterWorkflow";
+  public static final String ENCRYPTION_WORKFLOW_TYPE = "EncryptedDataConverterWorkflow";
 
   /** Registered workflow type for {@code S3OffloadDataConverterWorkflow}. */
   public static final String S3_OFFLOAD_WORKFLOW_TYPE = "S3OffloadDataConverterWorkflow";
