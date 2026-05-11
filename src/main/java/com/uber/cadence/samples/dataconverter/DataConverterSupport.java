@@ -69,7 +69,8 @@ final class DataConverterSupport {
             "  ./gradlew -q execute -PmainClass=com.uber.cadence.samples.common.RegisterDomain");
         System.err.println();
         System.err.println("Or with Cadence CLI:");
-        System.err.println("  cadence --domain " + DataConverterConstants.DOMAIN + " domain register");
+        System.err.println(
+            "  cadence --domain " + DataConverterConstants.DOMAIN + " domain register");
         System.err.println();
         return true;
       }

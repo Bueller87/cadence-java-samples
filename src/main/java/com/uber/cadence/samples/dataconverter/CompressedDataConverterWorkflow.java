@@ -33,8 +33,8 @@ import java.util.Map;
  * input, output, and activity parameter by {@link CompressedJsonDataConverter}, which is wired in
  * at the worker by {@link DataConverterWorker}.
  *
- * <p>The workflow takes no inputs and builds its own large payload internally so it can be
- * started from the Cadence CLI without bundling a custom converter into the caller.
+ * <p>The workflow takes no inputs and builds its own large payload internally so it can be started
+ * from the Cadence CLI without bundling a custom converter into the caller.
  */
 public final class CompressedDataConverterWorkflow {
 
@@ -44,8 +44,8 @@ public final class CompressedDataConverterWorkflow {
 
   /**
    * A complex data structure with nested objects and arrays designed to demonstrate compression
-   * benefits. Fields are public + have no-arg constructors so the JSON data converter can
-   * serialize and deserialize them.
+   * benefits. Fields are public + have no-arg constructors so the JSON data converter can serialize
+   * and deserialize them.
    */
   public static final class LargePayload {
     public String id;
@@ -149,9 +149,10 @@ public final class CompressedDataConverterWorkflow {
     LargePayload p = new LargePayload();
     p.id = "large_payload_001";
     p.name = "Comprehensive Product Catalog";
-    p.description = repeat(
-        "This is a comprehensive product catalog containing thousands of items with detailed descriptions, specifications, and user reviews. Each item includes pricing information, inventory status, and customer feedback. The catalog is designed to provide complete information for customers making purchasing decisions. ",
-        50);
+    p.description =
+        repeat(
+            "This is a comprehensive product catalog containing thousands of items with detailed descriptions, specifications, and user reviews. Each item includes pricing information, inventory status, and customer feedback. The catalog is designed to provide complete information for customers making purchasing decisions. ",
+            50);
 
     p.metadata = new LinkedHashMap<>();
     for (int i = 0; i < 30; i++) {
@@ -167,9 +168,10 @@ public final class CompressedDataConverterWorkflow {
       Item it = new Item();
       it.itemId = "item_" + i;
       it.title = "High-Quality Product " + i + " with Advanced Features";
-      it.description = repeat(
-          "This is a premium product with exceptional quality and advanced features designed for professional use. It includes comprehensive documentation and support. ",
-          10);
+      it.description =
+          repeat(
+              "This is a premium product with exceptional quality and advanced features designed for professional use. It includes comprehensive documentation and support. ",
+              10);
       it.price = 100.0 + i * 10 + (i % 100) / 100.0;
       it.categories = new ArrayList<>();
       it.categories.add("Electronics");
@@ -192,9 +194,10 @@ public final class CompressedDataConverterWorkflow {
         r.reviewId = "review_" + i + "_" + j;
         r.userId = "user_" + j;
         r.rating = 1 + (j % 5);
-        r.comment = repeat(
-            "This is a detailed customer review with comprehensive feedback about the product quality, delivery experience, and overall satisfaction. The customer provides specific details about their experience. ",
-            3);
+        r.comment =
+            repeat(
+                "This is a detailed customer review with comprehensive feedback about the product quality, delivery experience, and overall satisfaction. The customer provides specific details about their experience. ",
+                3);
         r.helpfulVotes = j * 2;
         r.notHelpfulVotes = j;
         r.date = "2024-01-15T10:30:00Z";
@@ -290,9 +293,10 @@ public final class CompressedDataConverterWorkflow {
   public interface WorkflowIface {
 
     @WorkflowMethod(
-        name = DataConverterConstants.COMPRESSION_WORKFLOW_TYPE,
-        executionStartToCloseTimeoutSeconds = 60,
-        taskList = DataConverterConstants.TASK_LIST_COMPRESSION)
+      name = DataConverterConstants.COMPRESSION_WORKFLOW_TYPE,
+      executionStartToCloseTimeoutSeconds = 60,
+      taskList = DataConverterConstants.TASK_LIST_COMPRESSION
+    )
     LargePayload run();
   }
 

@@ -28,8 +28,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Demonstrates the claim-check pattern: payloads larger than the configured threshold are stored
- * in an external {@link BlobStore} and only a small reference travels through Cadence history.
+ * Demonstrates the claim-check pattern: payloads larger than the configured threshold are stored in
+ * an external {@link BlobStore} and only a small reference travels through Cadence history.
  *
  * <p>The workflow takes no inputs and builds a payload well above the threshold internally so it
  * can be started from the Cadence CLI and every run exercises the offload path.
@@ -66,8 +66,10 @@ public final class S3OffloadDataConverterWorkflow {
   public static S3LargePayload createS3LargePayload() {
     S3LargePayload p = new S3LargePayload();
     p.jobId = "batch-job-20240115-001";
-    p.description = repeat(
-        "Large telemetry batch job containing sensor readings from the production cluster. ", 10);
+    p.description =
+        repeat(
+            "Large telemetry batch job containing sensor readings from the production cluster. ",
+            10);
 
     p.dataPoints = new ArrayList<>(200);
     for (int i = 0; i < 200; i++) {
@@ -100,9 +102,10 @@ public final class S3OffloadDataConverterWorkflow {
   public interface WorkflowIface {
 
     @WorkflowMethod(
-        name = DataConverterConstants.S3_OFFLOAD_WORKFLOW_TYPE,
-        executionStartToCloseTimeoutSeconds = 60,
-        taskList = DataConverterConstants.TASK_LIST_S3)
+      name = DataConverterConstants.S3_OFFLOAD_WORKFLOW_TYPE,
+      executionStartToCloseTimeoutSeconds = 60,
+      taskList = DataConverterConstants.TASK_LIST_S3
+    )
     S3LargePayload run();
   }
 

@@ -26,8 +26,8 @@ import java.util.UUID;
  * Starts {@link S3OffloadDataConverterWorkflow} (async, fire-and-forget).
  *
  * <p>The workflow takes no inputs and generates its own payload, so this starter does not need to
- * use the matching {@link S3OffloadDataConverter}. The same effect can be achieved from the
- * Cadence CLI via:
+ * use the matching {@link S3OffloadDataConverter}. The same effect can be achieved from the Cadence
+ * CLI via:
  *
  * <pre>
  * cadence --domain samples-domain \

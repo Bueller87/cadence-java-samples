@@ -24,8 +24,8 @@ import java.nio.charset.StandardCharsets;
  *
  * <p>Reads the key from the {@code CADENCE_ENCRYPTION_KEY} environment variable as 64 hex
  * characters (32 bytes). If the env var is unset, falls back to a hardcoded demo key with a
- * warning. If the env var is set but invalid, throws — silently falling back to the public demo
- * key when the user clearly intended their own key would be a security hole.
+ * warning. If the env var is set but invalid, throws — silently falling back to the public demo key
+ * when the user clearly intended their own key would be a security hole.
  */
 public final class EncryptionKeyLoader {
 
@@ -51,7 +51,8 @@ public final class EncryptionKeyLoader {
     try {
       key = hexDecode(hexKey);
     } catch (IllegalArgumentException e) {
-      throw new IllegalStateException("CADENCE_ENCRYPTION_KEY is not valid hex: " + e.getMessage(), e);
+      throw new IllegalStateException(
+          "CADENCE_ENCRYPTION_KEY is not valid hex: " + e.getMessage(), e);
     }
     if (key.length != 32) {
       throw new IllegalStateException(
