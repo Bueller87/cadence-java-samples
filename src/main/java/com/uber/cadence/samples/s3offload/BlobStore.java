@@ -15,7 +15,7 @@
  *  permissions and limitations under the License.
  */
 
-package com.uber.cadence.samples.dataconverter;
+package com.uber.cadence.samples.s3offload;
 
 import java.io.IOException;
 

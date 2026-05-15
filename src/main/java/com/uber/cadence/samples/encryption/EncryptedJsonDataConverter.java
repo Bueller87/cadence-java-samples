@@ -15,7 +15,7 @@
  *  permissions and limitations under the License.
  */
 
-package com.uber.cadence.samples.dataconverter;
+package com.uber.cadence.samples.encryption;
 
 import com.uber.cadence.converter.DataConverter;
 import com.uber.cadence.converter.DataConverterException;

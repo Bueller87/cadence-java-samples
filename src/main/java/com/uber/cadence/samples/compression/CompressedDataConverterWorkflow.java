@@ -15,7 +15,7 @@
  *  permissions and limitations under the License.
  */
 
-package com.uber.cadence.samples.dataconverter;
+package com.uber.cadence.samples.compression;
 
 import com.uber.cadence.activity.ActivityMethod;
 import com.uber.cadence.activity.ActivityOptions;
@@ -31,7 +31,7 @@ import java.util.Map;
  * Demonstrates gzip-over-JSON compression as a Cadence {@code DataConverter}. The workflow itself
  * is unchanged from a plain Cadence workflow — the compression is applied transparently to every
  * input, output, and activity parameter by {@link CompressedJsonDataConverter}, which is wired in
- * at the worker by {@link DataConverterWorker}.
+ * at the worker by {@link CompressionWorker}.
  *
  * <p>The workflow takes no inputs and builds its own large payload internally so it can be started
  * from the Cadence CLI without bundling a custom converter into the caller.
@@ -39,6 +39,14 @@ import java.util.Map;
 public final class CompressedDataConverterWorkflow {
 
   private CompressedDataConverterWorkflow() {}
+
+  /** Task list polled by {@link CompressionWorker}. */
+  public static final String TASK_LIST = "data-compression";
+
+  /**
+   * Registered workflow type, used for both {@code @WorkflowMethod} and CLI {@code workflow start}.
+   */
+  public static final String WORKFLOW_TYPE = "CompressedDataConverterWorkflow";
 
   // ---------------- POJOs ----------------
 
@@ -293,9 +301,9 @@ public final class CompressedDataConverterWorkflow {
   public interface WorkflowIface {
 
     @WorkflowMethod(
-      name = DataConverterConstants.COMPRESSION_WORKFLOW_TYPE,
+      name = WORKFLOW_TYPE,
       executionStartToCloseTimeoutSeconds = 60,
-      taskList = DataConverterConstants.TASK_LIST_COMPRESSION
+      taskList = TASK_LIST
     )
     LargePayload run();
   }

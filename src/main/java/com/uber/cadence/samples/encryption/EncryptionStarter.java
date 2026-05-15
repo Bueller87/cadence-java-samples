@@ -15,10 +15,14 @@
  *  permissions and limitations under the License.
  */
 
-package com.uber.cadence.samples.dataconverter;
+package com.uber.cadence.samples.encryption;
 
 import com.uber.cadence.client.WorkflowClient;
+import com.uber.cadence.client.WorkflowClientOptions;
 import com.uber.cadence.client.WorkflowOptions;
+import com.uber.cadence.internal.compatibility.Thrift2ProtoAdapter;
+import com.uber.cadence.internal.compatibility.proto.serviceclient.IGrpcServiceStubs;
+import com.uber.cadence.samples.common.SampleConstants;
 import java.time.Duration;
 import java.util.UUID;
 
@@ -43,10 +47,13 @@ public final class EncryptionStarter {
 
   public static void main(String[] args) {
     try {
-      WorkflowClient client = DataConverterSupport.newWorkflowClient();
+      WorkflowClient client =
+          WorkflowClient.newInstance(
+              new Thrift2ProtoAdapter(IGrpcServiceStubs.newInstance()),
+              WorkflowClientOptions.newBuilder().setDomain(SampleConstants.DOMAIN).build());
       WorkflowOptions options =
           new WorkflowOptions.Builder()
-              .setTaskList(DataConverterConstants.TASK_LIST_ENCRYPTION)
+              .setTaskList(EncryptedDataConverterWorkflow.TASK_LIST)
               .setExecutionStartToCloseTimeout(Duration.ofMinutes(1))
               .setWorkflowId("encryption-" + UUID.randomUUID())
               .build();
@@ -56,15 +63,45 @@ public final class EncryptionStarter {
 
       WorkflowClient.start(workflow::run);
       System.out.println(
-          "Started EncryptedDataConverterWorkflow on task list \""
-              + DataConverterConstants.TASK_LIST_ENCRYPTION
+          "Started "
+              + EncryptedDataConverterWorkflow.WORKFLOW_TYPE
+              + " on task list \""
+              + EncryptedDataConverterWorkflow.TASK_LIST
               + "\".");
       System.exit(0);
     } catch (RuntimeException e) {
-      if (DataConverterSupport.printHintIfDomainMissing(e)) {
+      if (printHintIfDomainMissing(e)) {
         System.exit(1);
       }
       throw e;
     }
+  }
+
+  /**
+   * Prints a copy-paste hint when the Cadence error indicates the sample domain has not been
+   * registered.
+   *
+   * @return true if {@code t} was a missing-domain error and a hint was printed (caller should
+   *     exit).
+   */
+  static boolean printHintIfDomainMissing(Throwable t) {
+    for (Throwable c = t; c != null; c = c.getCause()) {
+      String m = c.getMessage();
+      if (m != null && m.contains("Domain") && m.contains("does not exist")) {
+        System.err.println();
+        System.err.println(
+            "Cadence reported that the domain \"" + SampleConstants.DOMAIN + "\" does not exist.");
+        System.err.println("Register it once against your cluster, then run this again:");
+        System.err.println();
+        System.err.println(
+            "  ./gradlew -q execute -PmainClass=com.uber.cadence.samples.common.RegisterDomain");
+        System.err.println();
+        System.err.println("Or with Cadence CLI:");
+        System.err.println("  cadence --domain " + SampleConstants.DOMAIN + " domain register");
+        System.err.println();
+        return true;
+      }
+    }
+    return false;
   }
 }

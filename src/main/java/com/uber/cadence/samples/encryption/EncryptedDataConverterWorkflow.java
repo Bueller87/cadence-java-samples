@@ -15,7 +15,7 @@
  *  permissions and limitations under the License.
  */
 
-package com.uber.cadence.samples.dataconverter;
+package com.uber.cadence.samples.encryption;
 
 import com.uber.cadence.activity.ActivityMethod;
 import com.uber.cadence.activity.ActivityOptions;
@@ -35,6 +35,14 @@ import java.time.Duration;
 public final class EncryptedDataConverterWorkflow {
 
   private EncryptedDataConverterWorkflow() {}
+
+  /** Task list polled by {@link EncryptionWorker}. */
+  public static final String TASK_LIST = "data-encryption";
+
+  /**
+   * Registered workflow type, used for both {@code @WorkflowMethod} and CLI {@code workflow start}.
+   */
+  public static final String WORKFLOW_TYPE = "EncryptedDataConverterWorkflow";
 
   // ---------------- POJOs ----------------
 
@@ -79,9 +87,9 @@ public final class EncryptedDataConverterWorkflow {
   public interface WorkflowIface {
 
     @WorkflowMethod(
-      name = DataConverterConstants.ENCRYPTION_WORKFLOW_TYPE,
+      name = WORKFLOW_TYPE,
       executionStartToCloseTimeoutSeconds = 60,
-      taskList = DataConverterConstants.TASK_LIST_ENCRYPTION
+      taskList = TASK_LIST
     )
     SensitiveCustomerRecord run();
   }

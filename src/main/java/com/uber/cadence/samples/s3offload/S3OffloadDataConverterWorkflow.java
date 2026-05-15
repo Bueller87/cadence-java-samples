@@ -15,7 +15,7 @@
  *  permissions and limitations under the License.
  */
 
-package com.uber.cadence.samples.dataconverter;
+package com.uber.cadence.samples.s3offload;
 
 import com.uber.cadence.activity.ActivityMethod;
 import com.uber.cadence.activity.ActivityOptions;
@@ -37,6 +37,24 @@ import java.util.Map;
 public final class S3OffloadDataConverterWorkflow {
 
   private S3OffloadDataConverterWorkflow() {}
+
+  /** Task list polled by {@link S3OffloadWorker}. */
+  public static final String TASK_LIST = "data-s3";
+
+  /**
+   * Registered workflow type, used for both {@code @WorkflowMethod} and CLI {@code workflow start}.
+   */
+  public static final String WORKFLOW_TYPE = "S3OffloadDataConverterWorkflow";
+
+  /** Logical bucket / prefix embedded in S3-offload reference keys. */
+  public static final String S3_BUCKET = "data-s3";
+
+  /**
+   * Payloads larger than this are offloaded to the BlobStore by {@link S3OffloadDataConverter}.
+   * Cadence's default max payload is roughly 2 MB; the threshold is set intentionally low so the
+   * demo workflow comfortably triggers offloading.
+   */
+  public static final int DEFAULT_THRESHOLD_BYTES = 4096;
 
   // ---------------- POJOs ----------------
 
@@ -60,8 +78,8 @@ public final class S3OffloadDataConverterWorkflow {
   }
 
   /**
-   * Builds a payload comfortably larger than {@link
-   * DataConverterConstants#S3_DEFAULT_THRESHOLD_BYTES} so every workflow run triggers an offload.
+   * Builds a payload comfortably larger than {@link #DEFAULT_THRESHOLD_BYTES} so every workflow run
+   * triggers an offload.
    */
   public static S3LargePayload createS3LargePayload() {
     S3LargePayload p = new S3LargePayload();
@@ -102,9 +120,9 @@ public final class S3OffloadDataConverterWorkflow {
   public interface WorkflowIface {
 
     @WorkflowMethod(
-      name = DataConverterConstants.S3_OFFLOAD_WORKFLOW_TYPE,
+      name = WORKFLOW_TYPE,
       executionStartToCloseTimeoutSeconds = 60,
-      taskList = DataConverterConstants.TASK_LIST_S3
+      taskList = TASK_LIST
     )
     S3LargePayload run();
   }

@@ -29,7 +29,10 @@ These samples demonstrate various capabilities of Java Cadence client and server
 
 * **Custom Workflow Controls** ([`com.uber.cadence.samples.query`](src/main/java/com/uber/cadence/samples/query/)) — workflow queries that return **markdown** for Cadence Web (Markdoc buttons that **signal** workflows or **start** new workflows). **Requires Cadence Web v4.0.14+.** Copy-paste run instructions: [query samples README](src/main/java/com/uber/cadence/samples/query/README.md).
 
-* **DataConverter Samples** ([`com.uber.cadence.samples.dataconverter`](src/main/java/com/uber/cadence/samples/dataconverter/)) — three custom `DataConverter` patterns (gzip compression, AES-256-GCM encryption, and BlobStore / S3 claim-check offload) that transparently transform every workflow input, output, and activity parameter. Copy-paste run instructions: [dataconverter samples README](src/main/java/com/uber/cadence/samples/dataconverter/README.md).
+* **DataConverter Samples** — three independent custom `DataConverter` patterns that transparently transform every workflow input, output, and activity parameter. Each lives in its own package and is fully standalone, so you can copy any one of them into your own project:
+    * **Compression** ([`com.uber.cadence.samples.compression`](src/main/java/com/uber/cadence/samples/compression/)) — gzip-over-JSON; typically 60-80% size reduction for repetitive payloads. [README](src/main/java/com/uber/cadence/samples/compression/README.md).
+    * **Encryption** ([`com.uber.cadence.samples.encryption`](src/main/java/com/uber/cadence/samples/encryption/)) — AES-256-GCM so payloads in Cadence history are unreadable without the key. [README](src/main/java/com/uber/cadence/samples/encryption/README.md).
+    * **S3 / claim-check offload** ([`com.uber.cadence.samples.s3offload`](src/main/java/com/uber/cadence/samples/s3offload/)) — payloads above a threshold are stored in an external `BlobStore`; only a small reference travels through history. [README](src/main/java/com/uber/cadence/samples/s3offload/README.md).
 
 ## Get the Samples
 
@@ -143,17 +146,28 @@ In Cadence Web, open the workflow → **Query** tab → run query **`Signal`**, 
 
 ### DataConverter Samples
 
-Three samples (compression, encryption, S3 offload) demonstrating custom `DataConverter` implementations. One worker hosts all three on three task lists. See [src/main/java/com/uber/cadence/samples/dataconverter/README.md](src/main/java/com/uber/cadence/samples/dataconverter/README.md) for full details, encryption-key configuration, and S3 swap instructions.
+Three independent samples demonstrating custom `DataConverter` implementations. Each sample is self-contained in its own package with its own worker, starter, task list, and README. Pick one to run, or run all three in parallel — they share nothing.
 
-Worker (hosts all three samples; prints per-sample stats banners on startup):
+#### Compression (gzip-over-JSON)
 
-    ./gradlew -q execute -PmainClass=com.uber.cadence.samples.dataconverter.DataConverterWorker
+See [src/main/java/com/uber/cadence/samples/compression/README.md](src/main/java/com/uber/cadence/samples/compression/README.md).
 
-Starters (pick one per run; each starts a new workflow execution and exits):
+    ./gradlew -q execute -PmainClass=com.uber.cadence.samples.compression.CompressionWorker
+    ./gradlew -q execute -PmainClass=com.uber.cadence.samples.compression.CompressionStarter
 
-    ./gradlew -q execute -PmainClass=com.uber.cadence.samples.dataconverter.CompressionStarter
-    ./gradlew -q execute -PmainClass=com.uber.cadence.samples.dataconverter.EncryptionStarter
-    ./gradlew -q execute -PmainClass=com.uber.cadence.samples.dataconverter.S3OffloadStarter
+#### Encryption (AES-256-GCM)
+
+See [src/main/java/com/uber/cadence/samples/encryption/README.md](src/main/java/com/uber/cadence/samples/encryption/README.md) for the `CADENCE_ENCRYPTION_KEY` env var.
+
+    ./gradlew -q execute -PmainClass=com.uber.cadence.samples.encryption.EncryptionWorker
+    ./gradlew -q execute -PmainClass=com.uber.cadence.samples.encryption.EncryptionStarter
+
+#### S3 / claim-check offload
+
+See [src/main/java/com/uber/cadence/samples/s3offload/README.md](src/main/java/com/uber/cadence/samples/s3offload/README.md) for the AWS SDK swap-in instructions.
+
+    ./gradlew -q execute -PmainClass=com.uber.cadence.samples.s3offload.S3OffloadWorker
+    ./gradlew -q execute -PmainClass=com.uber.cadence.samples.s3offload.S3OffloadStarter
 
 ### Trip Booking
 
