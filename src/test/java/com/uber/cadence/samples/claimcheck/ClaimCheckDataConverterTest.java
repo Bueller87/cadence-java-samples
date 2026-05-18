@@ -15,7 +15,7 @@
  *  permissions and limitations under the License.
  */
 
-package com.uber.cadence.samples.s3offload;
+package com.uber.cadence.samples.claimcheck;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -33,42 +33,42 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-public class S3OffloadDataConverterTest {
+public class ClaimCheckDataConverterTest {
 
   @Rule public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Test
-  public void testS3OffloadConverterInlinesBelowThreshold() {
+  public void testClaimCheckConverterInlinesBelowThreshold() {
     RecordingBlobStore store = new RecordingBlobStore();
-    S3OffloadDataConverter converter = new S3OffloadDataConverter(store, "bucket", 1024);
+    ClaimCheckDataConverter converter = new ClaimCheckDataConverter(store, "bucket", 1024);
 
     byte[] encoded = converter.toData("small");
     String decoded = converter.fromData(encoded, String.class, String.class);
 
-    assertEquals(S3OffloadDataConverter.INLINE_PREFIX, encoded[0]);
+    assertEquals(ClaimCheckDataConverter.INLINE_PREFIX, encoded[0]);
     assertEquals("small", decoded);
     assertTrue(store.blobs.isEmpty());
   }
 
   @Test
-  public void testS3OffloadConverterOffloadsAndUsesIdempotentReference() {
+  public void testClaimCheckConverterOffloadsAndUsesIdempotentReference() {
     RecordingBlobStore store = new RecordingBlobStore();
-    S3OffloadDataConverter converter = new S3OffloadDataConverter(store, "bucket", 1);
+    ClaimCheckDataConverter converter = new ClaimCheckDataConverter(store, "bucket", 1);
 
     byte[] first = converter.toData("large enough to offload");
     byte[] second = converter.toData("large enough to offload");
     String decoded = converter.fromData(first, String.class, String.class);
 
-    assertEquals(S3OffloadDataConverter.OFFLOAD_PREFIX, first[0]);
+    assertEquals(ClaimCheckDataConverter.OFFLOAD_PREFIX, first[0]);
     assertArrayEquals(first, second);
     assertEquals("large enough to offload", decoded);
     assertEquals(1, store.blobs.size());
   }
 
   @Test
-  public void testS3OffloadConverterRejectsUnknownPrefix() {
-    S3OffloadDataConverter converter =
-        new S3OffloadDataConverter(new RecordingBlobStore(), "bucket", 1);
+  public void testClaimCheckConverterRejectsUnknownPrefix() {
+    ClaimCheckDataConverter converter =
+        new ClaimCheckDataConverter(new RecordingBlobStore(), "bucket", 1);
 
     try {
       converter.fromData(new byte[] {0x7f}, String.class, String.class);
@@ -79,10 +79,11 @@ public class S3OffloadDataConverterTest {
   }
 
   @Test
-  public void testS3OffloadConverterValidatesConstructorInputs() {
-    expectIllegalArgument(() -> new S3OffloadDataConverter(null, "bucket", 1));
-    expectIllegalArgument(() -> new S3OffloadDataConverter(new RecordingBlobStore(), " ", 1));
-    expectIllegalArgument(() -> new S3OffloadDataConverter(new RecordingBlobStore(), "bucket", -1));
+  public void testClaimCheckConverterValidatesConstructorInputs() {
+    expectIllegalArgument(() -> new ClaimCheckDataConverter(null, "bucket", 1));
+    expectIllegalArgument(() -> new ClaimCheckDataConverter(new RecordingBlobStore(), " ", 1));
+    expectIllegalArgument(
+        () -> new ClaimCheckDataConverter(new RecordingBlobStore(), "bucket", -1));
   }
 
   @Test

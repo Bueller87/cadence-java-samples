@@ -15,7 +15,7 @@
  *  permissions and limitations under the License.
  */
 
-package com.uber.cadence.samples.s3offload;
+package com.uber.cadence.samples.claimcheck;
 
 import com.uber.cadence.converter.DataConverter;
 import com.uber.cadence.converter.DataConverterException;
@@ -39,7 +39,7 @@ import java.security.NoSuchAlgorithmException;
  * <ul>
  *   <li>{@code 0x00 || json} — payload is small enough to inline.
  *   <li>{@code 0x01 || jsonEnvelope} — payload was offloaded; the envelope JSON has the form {@code
- *       {"s3Ref":"<bucket>/<sha256hex>"}}.
+ *       {"blobRef":"<bucket>/<sha256hex>"}}.
  * </ul>
  *
  * <p>Keys are derived from the SHA-256 of the payload so {@code toData} is idempotent across
@@ -50,12 +50,19 @@ import java.security.NoSuchAlgorithmException;
  */
 /*
  * =============================================================================
- * S3 BlobStore stub
+ * Swapping LocalFsBlobStore for a real object store
  *
- * To use a real AWS S3 bucket instead of the local filesystem:
- *  1. Add AWS SDK v2 to build.gradle:
- *       implementation group: 'software.amazon.awssdk', name: 's3', version: '2.25.0'
- *  2. Implement BlobStore against software.amazon.awssdk.services.s3.S3Client:
+ * The DataConverter is storage-agnostic: any class that implements `BlobStore` (two methods, `put`
+ * and `get`) will work. Swap `new LocalFsBlobStore()` in ClaimCheckWorker for your own impl and the
+ * workflow/activity code stays the same. Backend pointers:
+ *
+ *  - AWS S3:        software.amazon.awssdk:s3:2.25.0  (S3Client + PutObjectRequest/GetObjectRequest)
+ *  - GCS:           com.google.cloud:google-cloud-storage  (Storage.create(blobInfo, bytes))
+ *  - Azure Blob:    com.azure:azure-storage-blob  (BlobContainerClient.getBlobClient(...))
+ *  - MinIO / R2 /
+ *    LocalStack:    same as S3, just call S3Client.builder().endpointOverride(URI.create("..."))
+ *
+ * Reference S3 sketch using AWS SDK v2:
  *
  * public final class S3BlobStore implements BlobStore {
  *   private final S3Client s3;
@@ -78,18 +85,18 @@ import java.security.NoSuchAlgorithmException;
  *   }
  * }
  *
- *  3. Replace `new LocalFsBlobStore()` with `new S3BlobStore("my-bucket", "us-east-1")` in
- *     S3OffloadWorker.
- *  4. Set standard AWS env vars (AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY) or use an
- *     IAM instance role.
- *
- * You can also point the SDK at LocalStack or MinIO for local testing without a real AWS account.
+ * Wiring steps for any backend:
+ *  1. Add the backend's SDK as a runtime dependency in build.gradle.
+ *  2. Implement BlobStore against that SDK (≈30 lines, like the sketch above).
+ *  3. Replace `new LocalFsBlobStore()` with your `BlobStore` impl in ClaimCheckWorker.
+ *  4. Provide credentials via the SDK's standard mechanism (env vars, IAM role, etc.).
  *
  * Note on cleanup: this DataConverter does not delete blobs after the workflow completes. In
- * production, use S3 object lifecycle policies to automatically expire old blobs.
+ * production, use the object store's lifecycle policies (S3 object lifecycle, GCS object lifecycle
+ * management, Azure Blob lifecycle management, etc.) to automatically expire old blobs.
  * =============================================================================
  */
-public final class S3OffloadDataConverter implements DataConverter {
+public final class ClaimCheckDataConverter implements DataConverter {
 
   /** Prefix byte for inline (below-threshold) payloads. */
   static final byte INLINE_PREFIX = (byte) 0x00;
@@ -104,12 +111,12 @@ public final class S3OffloadDataConverter implements DataConverter {
   private final int thresholdBytes;
 
   static final class BlobReference {
-    public String s3Ref;
+    public String blobRef;
 
     public BlobReference() {}
 
-    BlobReference(String s3Ref) {
-      this.s3Ref = s3Ref;
+    BlobReference(String blobRef) {
+      this.blobRef = blobRef;
     }
   }
 
@@ -118,7 +125,7 @@ public final class S3OffloadDataConverter implements DataConverter {
    * @param bucket logical bucket / prefix name embedded in the reference key.
    * @param thresholdBytes max inline payload size; larger payloads are offloaded.
    */
-  public S3OffloadDataConverter(BlobStore store, String bucket, int thresholdBytes) {
+  public ClaimCheckDataConverter(BlobStore store, String bucket, int thresholdBytes) {
     if (store == null) {
       throw new IllegalArgumentException("store must not be null");
     }
@@ -190,26 +197,26 @@ public final class S3OffloadDataConverter implements DataConverter {
       case INLINE_PREFIX:
         return body;
       case OFFLOAD_PREFIX:
-        String key = extractS3Ref(body);
+        String key = extractBlobRef(body);
         try {
           return store.get(key);
         } catch (IOException e) {
           throw new DataConverterException(
-              "s3 offload: failed to fetch payload from blob store (key=" + key + ")", e);
+              "claimcheck: failed to fetch payload from blob store (key=" + key + ")", e);
         }
       default:
         throw new DataConverterException(
-            "s3 offload: unknown prefix byte 0x" + String.format("%02x", prefix & 0xff), null);
+            "claimcheck: unknown prefix byte 0x" + String.format("%02x", prefix & 0xff), null);
     }
   }
 
-  private static String extractS3Ref(byte[] envelopeJson) throws DataConverterException {
+  private static String extractBlobRef(byte[] envelopeJson) throws DataConverterException {
     BlobReference reference =
         delegate.fromData(envelopeJson, BlobReference.class, BlobReference.class);
-    if (reference == null || reference.s3Ref == null || reference.s3Ref.isEmpty()) {
-      throw new DataConverterException("s3 offload: envelope missing s3Ref field", null);
+    if (reference == null || reference.blobRef == null || reference.blobRef.isEmpty()) {
+      throw new DataConverterException("claimcheck: envelope missing blobRef field", null);
     }
-    return reference.s3Ref;
+    return reference.blobRef;
   }
 
   private static String sha256Hex(byte[] data) throws DataConverterException {

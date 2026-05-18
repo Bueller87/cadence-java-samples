@@ -32,7 +32,7 @@ These samples demonstrate various capabilities of Java Cadence client and server
 * **DataConverter Samples** — three independent custom `DataConverter` patterns that transparently transform every workflow input, output, and activity parameter. Each lives in its own package and is fully standalone, so you can copy any one of them into your own project:
     * **Compression** ([`com.uber.cadence.samples.compression`](src/main/java/com/uber/cadence/samples/compression/)) — gzip-over-JSON; typically 60-80% size reduction for repetitive payloads. [README](src/main/java/com/uber/cadence/samples/compression/README.md).
     * **Encryption** ([`com.uber.cadence.samples.encryption`](src/main/java/com/uber/cadence/samples/encryption/)) — AES-256-GCM so payloads in Cadence history are unreadable without the key. [README](src/main/java/com/uber/cadence/samples/encryption/README.md).
-    * **S3 / claim-check offload** ([`com.uber.cadence.samples.s3offload`](src/main/java/com/uber/cadence/samples/s3offload/)) — payloads above a threshold are stored in an external `BlobStore`; only a small reference travels through history. [README](src/main/java/com/uber/cadence/samples/s3offload/README.md).
+    * **Claim-check offload** ([`com.uber.cadence.samples.claimcheck`](src/main/java/com/uber/cadence/samples/claimcheck/)) — payloads above a threshold are stored in an external `BlobStore` (S3, GCS, Azure Blob, MinIO, local disk); only a small reference travels through history. [README](src/main/java/com/uber/cadence/samples/claimcheck/README.md).
 
 ## Get the Samples
 
@@ -162,12 +162,12 @@ See [src/main/java/com/uber/cadence/samples/encryption/README.md](src/main/java/
     ./gradlew -q execute -PmainClass=com.uber.cadence.samples.encryption.EncryptionWorker
     ./gradlew -q execute -PmainClass=com.uber.cadence.samples.encryption.EncryptionStarter
 
-#### S3 / claim-check offload
+#### Claim-check offload
 
-See [src/main/java/com/uber/cadence/samples/s3offload/README.md](src/main/java/com/uber/cadence/samples/s3offload/README.md) for the AWS SDK swap-in instructions.
+See [src/main/java/com/uber/cadence/samples/claimcheck/README.md](src/main/java/com/uber/cadence/samples/claimcheck/README.md) for swap-in instructions for S3, GCS, Azure Blob, and MinIO.
 
-    ./gradlew -q execute -PmainClass=com.uber.cadence.samples.s3offload.S3OffloadWorker
-    ./gradlew -q execute -PmainClass=com.uber.cadence.samples.s3offload.S3OffloadStarter
+    ./gradlew -q execute -PmainClass=com.uber.cadence.samples.claimcheck.ClaimCheckWorker
+    ./gradlew -q execute -PmainClass=com.uber.cadence.samples.claimcheck.ClaimCheckStarter
 
 ### Trip Booking
 

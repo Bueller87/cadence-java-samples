@@ -15,7 +15,7 @@
  *  permissions and limitations under the License.
  */
 
-package com.uber.cadence.samples.s3offload;
+package com.uber.cadence.samples.claimcheck;
 
 import com.uber.cadence.client.WorkflowClient;
 import com.uber.cadence.client.WorkflowClientOptions;
@@ -28,23 +28,23 @@ import com.uber.cadence.worker.Worker;
 import com.uber.cadence.worker.WorkerFactory;
 
 /**
- * Hosts the S3 offload (claim-check) sample worker. Constructs a {@link WorkflowClient} configured
- * with {@link S3OffloadDataConverter} backed by {@link LocalFsBlobStore} so payloads above the
- * threshold are stored on disk and replaced in Cadence history with a small reference. Swap in a
- * real S3-backed {@link BlobStore} (see comments in {@link S3OffloadDataConverter}) to move blobs
- * to S3 without changing any workflow or activity code.
+ * Hosts the claim-check sample worker. Constructs a {@link WorkflowClient} configured with {@link
+ * ClaimCheckDataConverter} backed by {@link LocalFsBlobStore} so payloads above the threshold are
+ * stored on disk and replaced in Cadence history with a small reference. Swap in any real {@link
+ * BlobStore} (S3, GCS, Azure Blob, MinIO — see comments in {@link ClaimCheckDataConverter}) to move
+ * blobs to a remote object store without changing any workflow or activity code.
  */
-public final class S3OffloadWorker {
+public final class ClaimCheckWorker {
 
-  private S3OffloadWorker() {}
+  private ClaimCheckWorker() {}
 
   public static void main(String[] args) {
     LocalFsBlobStore blobStore = new LocalFsBlobStore();
     DataConverter converter =
-        new S3OffloadDataConverter(
+        new ClaimCheckDataConverter(
             blobStore,
-            S3OffloadDataConverterWorkflow.S3_BUCKET,
-            S3OffloadDataConverterWorkflow.DEFAULT_THRESHOLD_BYTES);
+            ClaimCheckDataConverterWorkflow.BLOB_BUCKET,
+            ClaimCheckDataConverterWorkflow.DEFAULT_THRESHOLD_BYTES);
     WorkflowClient client =
         WorkflowClient.newInstance(
             new Thrift2ProtoAdapter(IGrpcServiceStubs.newInstance()),
@@ -54,16 +54,16 @@ public final class S3OffloadWorker {
                 .build());
 
     WorkerFactory factory = WorkerFactory.newInstance(client);
-    Worker worker = factory.newWorker(S3OffloadDataConverterWorkflow.TASK_LIST);
-    worker.registerWorkflowImplementationTypes(S3OffloadDataConverterWorkflow.WorkflowImpl.class);
-    worker.registerActivitiesImplementations(new S3OffloadDataConverterWorkflow.ActivitiesImpl());
+    Worker worker = factory.newWorker(ClaimCheckDataConverterWorkflow.TASK_LIST);
+    worker.registerWorkflowImplementationTypes(ClaimCheckDataConverterWorkflow.WorkflowImpl.class);
+    worker.registerActivitiesImplementations(new ClaimCheckDataConverterWorkflow.ActivitiesImpl());
     factory.start();
 
-    printS3OffloadStats(blobStore);
+    printClaimCheckStats(blobStore);
 
     System.out.println(
-        "S3OffloadWorker listening on \""
-            + S3OffloadDataConverterWorkflow.TASK_LIST
+        "ClaimCheckWorker listening on \""
+            + ClaimCheckDataConverterWorkflow.TASK_LIST
             + "\" (domain \""
             + SampleConstants.DOMAIN
             + "\").");
@@ -71,24 +71,24 @@ public final class S3OffloadWorker {
     Runtime.getRuntime().addShutdownHook(new Thread(factory::shutdown));
   }
 
-  private static void printS3OffloadStats(LocalFsBlobStore store) {
-    S3OffloadDataConverterWorkflow.S3LargePayload payload =
-        S3OffloadDataConverterWorkflow.createS3LargePayload();
+  private static void printClaimCheckStats(LocalFsBlobStore store) {
+    ClaimCheckDataConverterWorkflow.LargePayload payload =
+        ClaimCheckDataConverterWorkflow.createLargePayload();
     byte[] jsonBytes = JsonDataConverter.getInstance().toData(payload);
     int jsonSize = jsonBytes == null ? 0 : jsonBytes.length;
-    // History footprint = 1 prefix byte + JSON envelope {"s3Ref":"<bucket>/<sha256hex>"}.
+    // History footprint = 1 prefix byte + JSON envelope {"blobRef":"<bucket>/<sha256hex>"}.
     // SHA-256 hex digest is 64 chars; bucket + "/" + 64 hex chars.
     int cadenceBytes =
         1
-            + ("{\"s3Ref\":\""
-                    + S3OffloadDataConverterWorkflow.S3_BUCKET
+            + ("{\"blobRef\":\""
+                    + ClaimCheckDataConverterWorkflow.BLOB_BUCKET
                     + "/"
                     + repeatChar('a', 64)
                     + "\"}")
                 .length();
 
     System.out.println();
-    System.out.println("=== S3 Offload Sample Statistics ===");
+    System.out.println("=== Claim-Check Sample Statistics ===");
     System.out.printf(
         "Full payload JSON size:    %d bytes (%.2f KB)%n", jsonSize, jsonSize / 1024.0);
     System.out.printf(
@@ -102,8 +102,8 @@ public final class S3OffloadWorker {
     System.out.printf(
         "Start workflow: cadence --domain %s workflow start --tl %s --workflow_type %s --et 60%n",
         SampleConstants.DOMAIN,
-        S3OffloadDataConverterWorkflow.TASK_LIST,
-        S3OffloadDataConverterWorkflow.WORKFLOW_TYPE);
+        ClaimCheckDataConverterWorkflow.TASK_LIST,
+        ClaimCheckDataConverterWorkflow.WORKFLOW_TYPE);
     System.out.println("=====================================");
     System.out.println();
   }

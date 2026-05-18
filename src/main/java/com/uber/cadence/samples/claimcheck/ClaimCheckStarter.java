@@ -15,7 +15,7 @@
  *  permissions and limitations under the License.
  */
 
-package com.uber.cadence.samples.s3offload;
+package com.uber.cadence.samples.claimcheck;
 
 import com.uber.cadence.client.WorkflowClient;
 import com.uber.cadence.client.WorkflowClientOptions;
@@ -27,23 +27,23 @@ import java.time.Duration;
 import java.util.UUID;
 
 /**
- * Starts {@link S3OffloadDataConverterWorkflow} (async, fire-and-forget).
+ * Starts {@link ClaimCheckDataConverterWorkflow} (async, fire-and-forget).
  *
  * <p>The workflow takes no inputs and generates its own payload, so this starter does not need to
- * use the matching {@link S3OffloadDataConverter}. The same effect can be achieved from the Cadence
- * CLI via:
+ * use the matching {@link ClaimCheckDataConverter}. The same effect can be achieved from the
+ * Cadence CLI via:
  *
  * <pre>
  * cadence --domain samples-domain \
  *   workflow start \
- *   --workflow_type S3OffloadDataConverterWorkflow \
- *   --tl data-s3 \
+ *   --workflow_type ClaimCheckDataConverterWorkflow \
+ *   --tl data-claimcheck \
  *   --et 60
  * </pre>
  */
-public final class S3OffloadStarter {
+public final class ClaimCheckStarter {
 
-  private S3OffloadStarter() {}
+  private ClaimCheckStarter() {}
 
   public static void main(String[] args) {
     try {
@@ -53,20 +53,20 @@ public final class S3OffloadStarter {
               WorkflowClientOptions.newBuilder().setDomain(SampleConstants.DOMAIN).build());
       WorkflowOptions options =
           new WorkflowOptions.Builder()
-              .setTaskList(S3OffloadDataConverterWorkflow.TASK_LIST)
+              .setTaskList(ClaimCheckDataConverterWorkflow.TASK_LIST)
               .setExecutionStartToCloseTimeout(Duration.ofMinutes(1))
-              .setWorkflowId("s3-offload-" + UUID.randomUUID())
+              .setWorkflowId("claimcheck-" + UUID.randomUUID())
               .build();
 
-      S3OffloadDataConverterWorkflow.WorkflowIface workflow =
-          client.newWorkflowStub(S3OffloadDataConverterWorkflow.WorkflowIface.class, options);
+      ClaimCheckDataConverterWorkflow.WorkflowIface workflow =
+          client.newWorkflowStub(ClaimCheckDataConverterWorkflow.WorkflowIface.class, options);
 
       WorkflowClient.start(workflow::run);
       System.out.println(
           "Started "
-              + S3OffloadDataConverterWorkflow.WORKFLOW_TYPE
+              + ClaimCheckDataConverterWorkflow.WORKFLOW_TYPE
               + " on task list \""
-              + S3OffloadDataConverterWorkflow.TASK_LIST
+              + ClaimCheckDataConverterWorkflow.TASK_LIST
               + "\".");
       System.exit(0);
     } catch (RuntimeException e) {

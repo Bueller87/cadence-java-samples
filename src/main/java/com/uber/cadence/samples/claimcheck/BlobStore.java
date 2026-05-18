@@ -15,14 +15,14 @@
  *  permissions and limitations under the License.
  */
 
-package com.uber.cadence.samples.s3offload;
+package com.uber.cadence.samples.claimcheck;
 
 import java.io.IOException;
 
 /**
- * Abstraction over any external object store (local filesystem, S3, GCS, etc.).
+ * Abstraction over any external object store (local filesystem, S3, GCS, Azure Blob, etc.).
  *
- * <p>{@link S3OffloadDataConverter} uses this interface to store large payloads outside Cadence
+ * <p>{@link ClaimCheckDataConverter} uses this interface to store large payloads outside Cadence
  * history. The default implementation is {@link LocalFsBlobStore}, which writes to the system
  * temporary directory and requires no external services.
  */

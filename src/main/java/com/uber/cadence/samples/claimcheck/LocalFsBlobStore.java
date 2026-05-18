@@ -15,7 +15,7 @@
  *  permissions and limitations under the License.
  */
 
-package com.uber.cadence.samples.s3offload;
+package com.uber.cadence.samples.claimcheck;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -28,16 +28,16 @@ import java.security.NoSuchAlgorithmException;
 /**
  * {@link BlobStore} implementation backed by the local filesystem.
  *
- * <p>The default zero-config implementation used by {@link S3OffloadDataConverter} when running the
- * demo without real AWS. Files are written under {@code
- * ${java.io.tmpdir}/cadence-java-samples-data-s3/}.
+ * <p>The default zero-config implementation used by {@link ClaimCheckDataConverter} when running
+ * the demo without a real object store. Files are written under {@code
+ * ${java.io.tmpdir}/cadence-java-samples-claimcheck/}.
  */
 public final class LocalFsBlobStore implements BlobStore {
 
   private final Path baseDir;
 
   public LocalFsBlobStore() {
-    this(Paths.get(System.getProperty("java.io.tmpdir"), "cadence-java-samples-data-s3"));
+    this(Paths.get(System.getProperty("java.io.tmpdir"), "cadence-java-samples-claimcheck"));
   }
 
   public LocalFsBlobStore(Path baseDir) {

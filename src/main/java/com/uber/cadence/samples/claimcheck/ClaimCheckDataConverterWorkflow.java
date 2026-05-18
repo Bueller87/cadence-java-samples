@@ -15,7 +15,7 @@
  *  permissions and limitations under the License.
  */
 
-package com.uber.cadence.samples.s3offload;
+package com.uber.cadence.samples.claimcheck;
 
 import com.uber.cadence.activity.ActivityMethod;
 import com.uber.cadence.activity.ActivityOptions;
@@ -34,23 +34,23 @@ import java.util.Map;
  * <p>The workflow takes no inputs and builds a payload well above the threshold internally so it
  * can be started from the Cadence CLI and every run exercises the offload path.
  */
-public final class S3OffloadDataConverterWorkflow {
+public final class ClaimCheckDataConverterWorkflow {
 
-  private S3OffloadDataConverterWorkflow() {}
+  private ClaimCheckDataConverterWorkflow() {}
 
-  /** Task list polled by {@link S3OffloadWorker}. */
-  public static final String TASK_LIST = "data-s3";
+  /** Task list polled by {@link ClaimCheckWorker}. */
+  public static final String TASK_LIST = "data-claimcheck";
 
   /**
    * Registered workflow type, used for both {@code @WorkflowMethod} and CLI {@code workflow start}.
    */
-  public static final String WORKFLOW_TYPE = "S3OffloadDataConverterWorkflow";
+  public static final String WORKFLOW_TYPE = "ClaimCheckDataConverterWorkflow";
 
-  /** Logical bucket / prefix embedded in S3-offload reference keys. */
-  public static final String S3_BUCKET = "data-s3";
+  /** Logical bucket / prefix embedded in claim-check reference keys. */
+  public static final String BLOB_BUCKET = "claimcheck-blobs";
 
   /**
-   * Payloads larger than this are offloaded to the BlobStore by {@link S3OffloadDataConverter}.
+   * Payloads larger than this are offloaded to the BlobStore by {@link ClaimCheckDataConverter}.
    * Cadence's default max payload is roughly 2 MB; the threshold is set intentionally low so the
    * demo workflow comfortably triggers offloading.
    */
@@ -58,31 +58,31 @@ public final class S3OffloadDataConverterWorkflow {
 
   // ---------------- POJOs ----------------
 
-  public static final class S3LargePayload {
+  public static final class LargePayload {
     public String jobId;
     public String description;
-    public List<S3DataPoint> dataPoints;
+    public List<DataPoint> dataPoints;
     public Map<String, String> metadata;
     public String processedBy;
 
-    public S3LargePayload() {}
+    public LargePayload() {}
   }
 
-  public static final class S3DataPoint {
+  public static final class DataPoint {
     public String timestamp;
     public String metric;
     public double value;
     public String tags;
 
-    public S3DataPoint() {}
+    public DataPoint() {}
   }
 
   /**
    * Builds a payload comfortably larger than {@link #DEFAULT_THRESHOLD_BYTES} so every workflow run
    * triggers an offload.
    */
-  public static S3LargePayload createS3LargePayload() {
-    S3LargePayload p = new S3LargePayload();
+  public static LargePayload createLargePayload() {
+    LargePayload p = new LargePayload();
     p.jobId = "batch-job-20240115-001";
     p.description =
         repeat(
@@ -91,7 +91,7 @@ public final class S3OffloadDataConverterWorkflow {
 
     p.dataPoints = new ArrayList<>(200);
     for (int i = 0; i < 200; i++) {
-      S3DataPoint dp = new S3DataPoint();
+      DataPoint dp = new DataPoint();
       dp.timestamp = String.format("2024-01-15T%02d:30:00Z", i % 24);
       dp.metric = String.format("telemetry.sensor_%03d.temperature", i);
       dp.value = 20.0 + (i % 30) / 10.0;
@@ -103,7 +103,7 @@ public final class S3OffloadDataConverterWorkflow {
     for (int i = 0; i < 20; i++) {
       p.metadata.put(String.format("batch_key_%02d", i), repeat("value-data-", 5));
     }
-    p.processedBy = "s3-offload-worker-v1";
+    p.processedBy = "claimcheck-worker-v1";
     return p;
   }
 
@@ -124,13 +124,13 @@ public final class S3OffloadDataConverterWorkflow {
       executionStartToCloseTimeoutSeconds = 60,
       taskList = TASK_LIST
     )
-    S3LargePayload run();
+    LargePayload run();
   }
 
   public interface Activities {
 
     @ActivityMethod(scheduleToCloseTimeoutSeconds = 60)
-    S3LargePayload processS3Payload(S3LargePayload payload);
+    LargePayload processPayload(LargePayload payload);
   }
 
   public static final class WorkflowImpl implements WorkflowIface {
@@ -144,20 +144,20 @@ public final class S3OffloadDataConverterWorkflow {
                 .build());
 
     @Override
-    public S3LargePayload run() {
-      S3LargePayload payload = createS3LargePayload();
+    public LargePayload run() {
+      LargePayload payload = createLargePayload();
 
-      Workflow.getLogger(S3OffloadDataConverterWorkflow.class)
+      Workflow.getLogger(ClaimCheckDataConverterWorkflow.class)
           .info(
-              "S3 offload workflow started: job_id={}, data_points={}. Payload will be offloaded; only a reference travels through Cadence history.",
+              "Claim-check workflow started: job_id={}, data_points={}. Payload will be offloaded; only a reference travels through Cadence history.",
               payload.jobId,
               payload.dataPoints.size());
 
-      S3LargePayload result = activities.processS3Payload(payload);
+      LargePayload result = activities.processPayload(payload);
 
-      Workflow.getLogger(S3OffloadDataConverterWorkflow.class)
+      Workflow.getLogger(ClaimCheckDataConverterWorkflow.class)
           .info(
-              "S3 offload workflow completed: job_id={}. Payload was transparently offloaded and retrieved via the BlobStore.",
+              "Claim-check workflow completed: job_id={}. Payload was transparently offloaded and retrieved via the BlobStore.",
               result.jobId);
       return result;
     }
@@ -166,7 +166,7 @@ public final class S3OffloadDataConverterWorkflow {
   public static final class ActivitiesImpl implements Activities {
 
     @Override
-    public S3LargePayload processS3Payload(S3LargePayload payload) {
+    public LargePayload processPayload(LargePayload payload) {
       payload.processedBy = payload.processedBy + " (Processed)";
       return payload;
     }
